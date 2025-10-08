@@ -3,10 +3,10 @@ name: Development Build (Local Simulation)
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   build-only:
@@ -34,4 +34,11 @@ jobs:
           IMAGE_NAME="${SERVICE}:latest"
           echo "Building Docker image for $SERVICE..."
           docker build -t $IMAGE_NAME ./$SERVICE
-          echo " Build completed successfully for $SERVICE"
+          echo "Build completed successfully for $SERVICE"
+
+      - name: Restart ACI container group
+        run: |
+          echo "Restarting the entire ACI group..."
+          az container restart \
+            --resource-group microservicesRgJenniferCastro \
+            --name microservices-group
