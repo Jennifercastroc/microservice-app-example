@@ -72,7 +72,8 @@ jobs:
           docker build -t $IMAGE_NAME ./$SERVICE
 
           echo "Logging into ACR..."
-          echo "${{ secrets.AZURE_ACR_PASSWORD }}" | docker login ${{ secrets.REGISTRY_LOGIN_SERVER }} -u ${{ secrets.AZURE_ACR_USERNAME }} --password-stdin
+        
+          echo "${{ secrets.AZURE_ACR_PASSWORD }}" | az login --username ${{ secrets.AZURE_ACR_USERNAME }} --password-stdin
 
           echo "Pushing image to ACR..."
           docker push $IMAGE_NAME
