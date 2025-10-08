@@ -1,0 +1,85 @@
+name: Development Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  detect-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      REGISTRY_LOGIN_SERVER: microservicesacrjennifercastro.azurecr.io
+      REGISTRY_NAME: microservicesacrjennifercastro
+      AZURE_RESOURCE_GROUP: microservicesRgJenniferCastro
+      AZURE_CONTAINER_GROUP: microservices-group
+      ACR_USERNAME: ${{ secrets.AZURE_ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.AZURE_ACR_PASSWORD }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Detect changed microservice
+        id: detect
+        run: |
+          echo "Detecting changed folder..."
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '/' | cut -d'/' -f1 | uniq | head -1)
+          echo "Changed service: $CHANGED"
+          echo "service=$CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        if: steps.detect.outputs.service != ''
+        run: |
+          SERVICE=${{ steps.detect.outputs.service }}
+          IMAGE_NAME="${{ env.REGISTRY_LOGIN_SERVER }}/${SERVICE}:latest"
+          
+          echo "Building image for $SERVICE..."
+          docker build -t $IMAGE_NAME ./$SERVICE
+          
+          echo "Logging into ACR..."
+          echo "${{ env.ACR_PASSWORD }}" | docker login ${{ env.REGISTRY_LOGIN_SERVER }} -u ${{ env.ACR_USERNAME }} --password-stdin
+          
+          echo "Pushing image..."
+          docker push $IMAGE_NAME
+
+      - name: Restart ACI container group
+        if: steps.detect.outputs.service != ''
+        run: |
+          SERVICE=${{ steps.detect.outputs.service }}
+          echo "Restarting ACI for service: $SERVICE"
+          
+          # Elimina el contenedor antiguo
+          az container delete \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name $SERVICE \
+            --yes || true
+          
+          # Recrea el contenedor con la nueva imagen
+          az container create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name $SERVICE \
+            --image "${{ env.REGISTRY_LOGIN_SERVER }}/${SERVICE}:latest" \
+            --cpu 1 --memory 1 \
+            --registry-login-server ${{ env.REGISTRY_LOGIN_SERVER }} \
+            --registry-username ${{ env.ACR_USERNAME }} \
+            --registry-password ${{ env.ACR_PASSWORD }} \
+            --restart-policy Always \
+            --location eastus

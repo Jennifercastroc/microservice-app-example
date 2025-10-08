@@ -30,3 +30,4 @@ EXPOSE 8080
 
 # Ejecutar la aplicación
 ENTRYPOINT ["./auth-api"]
+
