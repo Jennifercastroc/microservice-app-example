@@ -15,17 +15,38 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        with:
+          fetch-depth: 0    # <--- traer todo el historial para poder usar HEAD^
 
       - name: Detect changed microservice
         id: detect
         run: |
+          set -euo pipefail
           echo "Detecting changed folder..."
-          CHANGED=$(git diff --name-only HEAD^ HEAD | grep '/' | cut -d'/' -f1 | sort | uniq | head -1 || true)
-          echo "Changed service: $CHANGED"
+          # Si es un PR, GITHUB_BASE_REF está definido; para push no lo está.
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            echo "Event is a pull_request. Base ref: $GITHUB_BASE_REF"
+            # traer base branch para comparar
+            git fetch origin $GITHUB_BASE_REF --depth=1 || true
+            CHANGED=$(git diff --name-only origin/$GITHUB_BASE_REF HEAD | grep '/' | cut -d'/' -f1 | sort -u | head -n1 || true)
+          else
+            echo "Event is a push. Trying HEAD^..."
+            # si HEAD^ no existe (shallow), intentar obtener más historial
+            if ! git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+              echo "No previous commit locally — fetching history..."
+              git fetch --prune --unshallow || true
+            fi
+            CHANGED=$(git diff --name-only HEAD^ HEAD | grep '/' | cut -d'/' -f1 | sort -u | head -n1 || true)
+          fi
+
+          # debug: muestra últimos commits y archivos para revisar
+          echo "----- git log (last 5) -----"
+          git --no-pager log --oneline -5 || true
+          echo "----- changed folder result -----"
+          echo "$CHANGED"
+
           echo "service=$CHANGED" >> $GITHUB_OUTPUT
+
 
 
       - name: Build Docker image (simulation)
