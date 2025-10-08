@@ -7,7 +7,7 @@
                 <div class='row'>
                     <div class='col-md-3'></div>
                     <div class='col-md-6'>
-                        <h2>Please Login</h2>
+                        <h2>Login</h2>
                         <hr>
                     </div>
                 </div>
@@ -22,7 +22,7 @@
                                   type='text'
                                   name='username'
                                   class='form-control'
-                                  placeholder='johnd'
+                                  placeholder='jennifer'
                                   v-model='credentials.username'
                                   required
                                   autofocus
