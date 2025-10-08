@@ -13,36 +13,54 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # traer todo el historial para poder usar HEAD^ y comparaciones
+
       - name: Detect changed microservice
         id: detect
         run: |
           set -euo pipefail
           echo "Detecting changed folder..."
 
-          if [ -n "${GITHUB_BASE_REF:-}" ]; then
-            echo "Event is a pull_request. Base ref: $GITHUB_BASE_REF"
-            git fetch origin $GITHUB_BASE_REF --depth=1 || true
-            CHANGED=$(git diff --name-only origin/$GITHUB_BASE_REF HEAD | grep '/' | cut -d'/' -f1 | sort -u | head -n1 || true)
+          # Safety: ensure .git exists
+          if [ ! -d .git ]; then
+            echo "ERROR: .git not found in workspace. Ensure 'actions/checkout' ran correctly."
+            echo "service=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Distinguish event types: pull_request or push
+          if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
+            echo "Event is a pull_request. Fetching base branch..."
+            BASE_REF="${{ github.event.pull_request.base.ref }}"
+            git fetch origin "$BASE_REF" --depth=1 || true
+            CHANGED=$(git diff --name-only origin/"$BASE_REF"...HEAD | grep '/' | cut -d'/' -f1 | sort -u | head -n1 || true)
           else
             echo "Event is a push. Trying HEAD^..."
             if ! git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-              echo "No previous commit locally — fetching history..."
+              echo "Previous commit not present locally — fetching history..."
               git fetch --prune --unshallow || true
             fi
             CHANGED=$(git diff --name-only HEAD^ HEAD | grep '/' | cut -d'/' -f1 | sort -u | head -n1 || true)
           fi
 
-          echo "Changed folder detected: $CHANGED"
+          echo "----- git log (last 5) -----"
+          git --no-pager log --oneline -5 || true
+          echo "----- changed folder result -----"
+          echo "$CHANGED"
 
-          #  Filtrar carpetas válidas (las de tus microservicios)
+          # Filter only valid service folders
           VALID_SERVICES=("frontend" "auth-api" "users-api" "todos-api" "log-message-processor")
-          if [[ " ${VALID_SERVICES[@]} " =~ " ${CHANGED} " ]]; then
+          if [[ -n "$CHANGED" && " ${VALID_SERVICES[*]} " == *" $CHANGED "* ]]; then
             echo "Valid microservice detected: $CHANGED"
             echo "service=$CHANGED" >> $GITHUB_OUTPUT
           else
             echo "No valid microservice changed — skipping build."
             echo "service=" >> $GITHUB_OUTPUT
           fi
+
 
       - name: Build and push Docker image
         if: steps.detect.outputs.service != ''
