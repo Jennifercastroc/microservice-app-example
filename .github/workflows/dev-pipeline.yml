@@ -45,10 +45,10 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          
+
       - name: Restart ACI container group
         run: |
           echo "Restarting the entire ACI group..."
           az container restart \
             --resource-group microservicesRgJenniferCastro \
-            --name microservices-group
+            --name microservices-group || true
