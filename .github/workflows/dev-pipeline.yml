@@ -61,7 +61,7 @@ jobs:
             echo "service=" >> $GITHUB_OUTPUT
           fi
 
-          
+
       - name: Install Azure CLI
         run: |
           sudo apt-get update
@@ -84,8 +84,6 @@ jobs:
           docker build -t $IMAGE_NAME ./$SERVICE
 
           echo "Logging into ACR..."
-        
-          az login 
 
           echo "Pushing image to ACR..."
           docker push $IMAGE_NAME
