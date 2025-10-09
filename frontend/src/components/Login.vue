@@ -22,7 +22,7 @@
                                   type='text'
                                   name='username'
                                   class='form-control'
-                                  placeholder='Jenifer no puso los secrets bien xd'
+                                  placeholder='Jenifer es la mejor xd'
                                   v-model='credentials.username'
                                   required
                                   autofocus
