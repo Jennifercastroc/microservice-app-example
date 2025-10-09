@@ -107,8 +107,6 @@ jobs:
             --image "${{ secrets.REGISTRY_LOGIN_SERVER }}/${SERVICE}:latest" \
             --cpu 1 --memory 1 \
             --registry-login-server ${{ secrets.REGISTRY_LOGIN_SERVER }} \
-            --registry-username ${{ secrets.AZURE_ACR_USERNAME }} \
-            --registry-password ${{ secrets.AZURE_ACR_PASSWORD }} \
             --os-type Linux \
             --restart-policy Always \
             --location eastus
