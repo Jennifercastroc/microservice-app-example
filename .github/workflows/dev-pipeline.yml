@@ -88,6 +88,8 @@ jobs:
           echo "Pushing image to ACR..."
           docker push $IMAGE_NAME
 
+          az acr login --name ${{ secrets.REGISTRY_LOGIN_SERVER }}
+
 
       - name: Restart only the updated container
         if: steps.detect.outputs.service != ''
