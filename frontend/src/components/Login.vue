@@ -22,7 +22,7 @@
                                   type='text'
                                   name='username'
                                   class='form-control'
-                                  placeholder=' please'
+                                  placeholder='xdxd please'
                                   v-model='credentials.username'
                                   required
                                   autofocus

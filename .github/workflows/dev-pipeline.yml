@@ -73,7 +73,7 @@ jobs:
 
           echo "Logging into ACR..."
         
-          echo "${{ secrets.AZURE_ACR_PASSWORD }}" | az login --username ${{ secrets.AZURE_ACR_USERNAME }} --password-stdin
+          az login --username ${{ secrets.AZURE_ACR_USERNAME }} --password ${{ secrets.AZURE_ACR_PASSWORD }}
 
           echo "Pushing image to ACR..."
           docker push $IMAGE_NAME
